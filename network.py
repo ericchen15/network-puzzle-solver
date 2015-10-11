@@ -711,8 +711,8 @@ def user_input():
     month = input('enter month: ')
     date = input('enter date: ')
     size = input('enter size (6, 9, 12): ')
-    wrap = input('wrap? True/False: ')
-    run(int(month), int(date), int(size), wrap.upper() == 'TRUE')
+    wrap = input('wrap? Yes/No: ')
+    run(int(month), int(date), int(size), wrap.upper() == 'YES' or wrap.upper() == 'Y')
 
 def run(month, date, size, wrap):
     r = Reader(month, date, size, wrap)
