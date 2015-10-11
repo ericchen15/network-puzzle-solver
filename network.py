@@ -705,9 +705,10 @@ class Reader(object):
                 curr_cell.set_shape(self.shape_list[self.size * row + col](curr_cell))
 
 def user_input():
-    print('this program solves the \"network\" logic puzzles on brainbashers.com')
+    print('this program solves the \"network\" logic puzzles on brainbashers.com/network.asp')
     print('it genereates a url, finds the puzzle data in the html file, and applies a recursive algorithm to solve the puzzle')
     print('only puzzles from the last 10 days are available')
+    print('each day has 6 puzzles: 3 sizes and either wrap or no wrap')
     month = input('enter month (integer): ')
     date = input('enter date (integer): ')
     size = input('enter size (6, 9, 12): ')
