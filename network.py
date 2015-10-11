@@ -708,10 +708,10 @@ def user_input():
     print('this program solves the \"network\" logic puzzles on brainbashers.com')
     print('it genereates a url, finds the puzzle data in the html file, and applies a recursive algorithm to solve the puzzle')
     print('only puzzles from the last 10 days are available')
-    month = input('enter month: ')
-    date = input('enter date: ')
+    month = input('enter month (integer): ')
+    date = input('enter date (integer): ')
     size = input('enter size (6, 9, 12): ')
-    wrap = input('wrap? Yes/No: ')
+    wrap = input('wrap? (Yes/No): ')
     run(int(month), int(date), int(size), wrap.upper() == 'YES' or wrap.upper() == 'Y')
 
 def run(month, date, size, wrap):
