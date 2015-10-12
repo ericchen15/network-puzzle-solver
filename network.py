@@ -663,7 +663,43 @@ class Solver(object):
 
 shape_dictionary = {'1':One, '2':One, '4':One, '8':One, '3':Two, '6':Two, '9':Two, 'c':Two, '5':Line, 'a':Line, '7':Three, 'b':Three, 'd':Three, 'e':Three}
 
+def big_to_small(char):
+    char_ascii = ord(char)
+    if char_ascii < 66:
+        return char
+    elif char_ascii < 75:
+        char_ascii -= 17
+    elif char_ascii < 80:
+        char_ascii += 22
+    else:
+        return char
+    return chr(char_ascii)
+
 class Reader(object):
+
+    do_open = True
+
+    def open(self):
+        if self.do_open:
+            response = urllib.request.urlopen(self.url)
+            self.data = response.read()
+            self.text = self.data.decode('utf-8')
+
+    def list_to_shapes(self):
+        filtered_list = ""
+        for char in self.char_list:
+            filtered_list += big_to_small(char)
+        self.shape_list = [shape_dictionary[char] for char in filtered_list]
+
+    def create_board(self):
+        self.board = Board(self.rows, self.cols)
+        self.board.wrap = self.wrap
+        for row in range(self.rows):
+            for col in range(self.cols):
+                curr_cell = self.board.grid[row][col]
+                curr_cell.set_shape(self.shape_list[self.cols * row + col](curr_cell))
+
+class BrainBashersReader(Reader):
 
     def __init__(self, month, date, size, wrap):
         if wrap:
@@ -671,61 +707,114 @@ class Reader(object):
         else:
             wrap_str = "NOWRAP"
         self.wrap = wrap
-        self.size = size
+        self.rows = size
+        self.cols = size
         self.str_date = str(date)
         if len(self.str_date) == 1:
             self.str_date = "0" + self.str_date
         self.url = "https://brainbashers.com/shownetwork.asp?date={0}{1}&size={2}&diff={3}".format(month, self.str_date, size, wrap_str)
 
-    def open(self):
-        response = urllib.request.urlopen(self.url)
-        self.data = response.read()
-        self.text = self.data.decode('utf-8')
-
     def create_list(self):
-        """
-        self.char_list = re.match("lcpuzzle.*?\"(.*)\"", self.text)
-        """
         index_lcpuzzle = self.text.index("lcpuzzle =")
         text = self.text[index_lcpuzzle:]
         index_quote = text.index('\"')
         text = text[index_quote + 1:]
-        self.char_list = text[:(self.size * self.size)]
-        assert len(self.char_list) == self.size * self.size
+        self.char_list = text[:(self.rows * self.cols)]
+        assert len(self.char_list) == self.rows * self.cols
 
-    def list_to_shapes(self):
-        self.shape_list = [shape_dictionary[char] for char in self.char_list]
 
-    def create_board(self):
-        self.board = Board(self.size, self.size)
-        self.board.wrap = self.wrap
-        for row in range(self.size):
-            for col in range(self.size):
-                curr_cell = self.board.grid[row][col]
-                curr_cell.set_shape(self.shape_list[self.size * row + col](curr_cell))
+class LogicGamesOnlineReader(Reader):
+
+    do_create_list = True
+
+    def __init__(self, puzzle_id = None):
+        if puzzle_id == None:
+            self.wrap = True
+            self.rows = 9
+            self.cols = 9
+            self.url = "http://www.logicgamesonline.com/netwalk/daily.php"
+        else:
+            self.do_open = False
+            self.do_create_list = False
+            num_cells = len(puzzle_id)
+            self.rows = int(num_cells ** 0.5)
+            self.cols = int(num_cells ** 0.5)
+            self.wrap = False
+            if self.rows == 9:
+                self.wrap = True
+            self.char_list = puzzle_id
+
+    def create_list(self):
+        if self.do_create_list:
+            index_puzzle = self.text.index("puzzle =")
+            text = self.text[index_puzzle:]
+            index_quote = text.index('\"')
+            text = text[index_quote + 1:]
+            self.char_list = text[:(self.rows * self.cols)]
+            assert len(self.char_list) == self.rows * self.cols
+
+class SimonTathamReader(Reader):
+
+    def __init__(self, puzzle_id):
+
+        self.do_open = False
+
+        index_x = puzzle_id.index('x')
+        self.cols = int(puzzle_id[:index_x])
+        puzzle_id = puzzle_id[index_x + 1:]
+        index_after_rows = puzzle_id.index(':')
+        if 'w' in puzzle_id:
+            self.wrap = True
+            index_after_rows = puzzle_id.index('w')
+        else:
+            self.wrap = False
+        self.rows = int(puzzle_id[:index_after_rows])
+        index_colon = puzzle_id.index(':')
+        self.char_list = puzzle_id[index_colon + 1:]
+        self.remove_barriers()
+
+    def remove_barriers(self):
+        filtered = ""
+        for char in self.char_list:
+            if char in shape_dictionary:
+                filtered += char
+        self.char_list = filtered
+
+    def create_list(self):
+        return
 
 def user_input():
-    print('this program solves the \"network\" logic puzzles on brainbashers.com/network.asp')
+    print('this program solves \"network\" logic puzzles')
     print('it genereates a url, finds the puzzle data in the html file, and applies a recursive algorithm to solve the puzzle')
-    print('only puzzles from the last 10 days are available')
-    print('each day has 6 puzzles: 3 sizes and either wrap or no wrap')
-    month = input('enter month (integer): ')
-    date = input('enter date (integer): ')
-    size = input('enter size (6, 9, 12): ')
-    wrap = input('wrap? (Yes/No): ')
-    run(int(month), int(date), int(size), wrap.upper() == 'YES' or wrap.upper() == 'Y')
+    site = input('enter site (brainbashers, logicgamesonline, simontatham): ')
+    if site == 'brainbashers':
+        month = input('enter month (integer): ')
+        date = input('enter date (integer): ')
+        size = input('enter size (6, 9, 12): ')
+        wrap = input('wrap? (Yes/No): ')
+        return BrainBashersReader(int(month), int(date), int(size), wrap.upper() == 'YES' or wrap.upper() == 'Y')
+    elif site == 'logicgamesonline':
+        default = input('daily expert puzzle? (Yes/No): ')
+        if default.upper() == 'YES' or default.upper() == 'Y':
+            return LogicGamesOnlineReader()
+        else:
+            puzzle_id = input('enter puzzle id: ')
+            return LogicGamesOnlineReader(puzzle_id)
+    elif site == 'simontatham':
+        puzzle_id = input('enter game id: ')
+        return SimonTathamReader(puzzle_id)
 
-def run(month, date, size, wrap):
-    r = Reader(month, date, size, wrap)
-    r.open()
-    r.create_list()
-    r.list_to_shapes()
-    r.create_board()
+def run():
+    reader = user_input()
+    reader.open()
+    reader.create_list()
+    reader.list_to_shapes()
+    reader.create_board()
 
-    s = Solver(r.board)
-    s.strategy()
+    solver = Solver(reader.board)
+    return solver.strategy()
 
-user_input()
+run()
 
 """
 board = Board(3, 3)
